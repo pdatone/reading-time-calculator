@@ -171,7 +171,7 @@
   let copyFeedbackTimer = null;
 
   function countWords(text) {
-    const words = text.trim().split(/\s+/).filter(function (w) { return w.length > 0; });
+    const words = text.trim().split(/[\s-]+/).filter(function (w) { return w.length > 0; });
     return words.length;
   }
 
