@@ -113,8 +113,13 @@
         <h2 class="flex items-center gap-2 text-xs font-bold tracking-widest uppercase text-ink-soft mb-4">
           <span class="w-2 h-2 rounded-full bg-hand flex-shrink-0"></span>計算結果
         </h2>
-        <div>
-          <span id="ms-value" class="ms-value font-mono-num font-semibold text-ink inline-block border-b-4 border-hand pb-1">0</span><span class="text-base font-medium text-hand ml-2">毫秒 ms</span>
+        <div class="flex items-end flex-wrap gap-x-2 gap-y-2">
+          <span id="ms-value" class="ms-value font-mono-num font-semibold text-ink inline-block border-b-4 border-hand pb-1">0</span><span class="text-base font-medium text-hand">毫秒 ms</span>
+          <button id="copy-ms-btn" type="button"
+            class="mb-1 border border-line rounded-full px-3 py-1 text-xs text-ink-soft bg-transparent transition duration-150 hover:text-ink hover:border-gray-500 cursor-pointer"
+            aria-label="複製毫秒數值">
+            複製
+          </button>
         </div>
         <div class="grid grid-cols-3 gap-2 mt-5">
           <div class="bg-gray-50 border border-line rounded-lg px-3 py-3">
@@ -150,6 +155,7 @@
   const wpmInput = document.getElementById('wpm-input');
   const wpmSlider = document.getElementById('wpm-slider');
   const clearBtn = document.getElementById('clear-btn');
+  const copyMsBtn = document.getElementById('copy-ms-btn');
 
   const msValue = document.getElementById('ms-value');
   const secValue = document.getElementById('sec-value');
@@ -161,6 +167,8 @@
   const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   let displayedMs = 0;   // 目前畫面上顯示的毫秒數(用於動畫)
   let animFrame = null;
+  let currentMs = 0;     // 最新計算結果(複製用,不受動畫影響)
+  let copyFeedbackTimer = null;
 
   function countWords(text) {
     const words = text.trim().split(/\s+/).filter(function (w) { return w.length > 0; });
@@ -207,6 +215,7 @@
     const words = countWords(textInput.value);
     const wpm = getWpm();
     const ms = Math.round((words / wpm) * 60000);
+    currentMs = ms;
     const totalSec = ms / 1000;
     const mins = Math.floor(totalSec / 60);
     const secs = Math.round(totalSec % 60);
@@ -235,6 +244,38 @@
   wpmSlider.addEventListener('input', function () {
     wpmInput.value = wpmSlider.value;
     update();
+  });
+
+  copyMsBtn.addEventListener('click', function () {
+    const text = String(currentMs);
+
+    function showCopied(ok) {
+      if (copyFeedbackTimer) clearTimeout(copyFeedbackTimer);
+      copyMsBtn.textContent = ok ? '已複製 ✓' : '複製失敗';
+      copyFeedbackTimer = setTimeout(function () {
+        copyMsBtn.textContent = '複製';
+      }, 1500);
+    }
+
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(
+        function () { showCopied(true); },
+        function () { showCopied(false); }
+      );
+    } else {
+      // 舊瀏覽器 / 非安全來源(file:// 以外的 http)的備援方案
+      const tmp = document.createElement('textarea');
+      tmp.value = text;
+      tmp.setAttribute('readonly', '');
+      tmp.style.position = 'fixed';
+      tmp.style.opacity = '0';
+      document.body.appendChild(tmp);
+      tmp.select();
+      let ok = false;
+      try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+      document.body.removeChild(tmp);
+      showCopied(ok);
+    }
   });
 
   clearBtn.addEventListener('click', function () {
